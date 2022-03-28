@@ -5,13 +5,13 @@ import math
 display = pg.display.set_mode((1280,720))
 clock = pg.time.Clock()
 
-player_walk = {"front":[pg.image.load("./ressources/images/player_front_"+str(x)+".png") for x in range(1,5)],
-"back":[pg.image.load("./ressources/images/player_back_"+str(x)+".png") for x in range(1,5)],
-"left":[pg.image.load("./ressources/images/player_left_"+str(x)+".png") for x in range(1,5)],
-"right":[pg.image.load("./ressources/images/player_right_"+str(x)+".png") for x in range(1,5)]}
+player_walk = {"front":[pg.image.load("./ressources/images/player_front_"+str(x)+".png").convert() for x in range(1,5)],
+"back":[pg.image.load("./ressources/images/player_back_"+str(x)+".png").convert() for x in range(1,5)],
+"left":[pg.image.load("./ressources/images/player_left_"+str(x)+".png").convert() for x in range(1,5)],
+"right":[pg.image.load("./ressources/images/player_right_"+str(x)+".png").convert() for x in range(1,5)]}
 
-slime_animation = [pg.image.load("./ressources/images/slime_"+str(x)+".png") for x in range(1,5)]
-slime_damage = pg.image.load("./ressources/images/slime_damage.png")
+slime_animation = [pg.image.load("./ressources/images/slime_"+str(x)+".png").convert() for x in range(1,5)]
+slime_damage = pg.image.load("./ressources/images/slime_damage.png").convert()
 
 def checkAttack(ennemy,attack):
 
@@ -42,7 +42,7 @@ class Player:
         self.orientation = "front"
         self.moving = False
         self.right_equip = "sword"
-        self.left_equip = "fire_small"
+        self.left_equip = "shotgun"
 
     def main(self, display):
         if self.animation_count >= 31:
@@ -83,32 +83,67 @@ class Ennemy:
         
         display.blit(pg.transform.scale(slime_animation[self.animation_count//16],(64,64)), (self.x-display_scroll[0], self.y-display_scroll[1]))
     
-    def damage(self, player):
+    def damage(self, player, attack):
         display.blit(pg.transform.scale(slime_damage, (64,64)), (self.x-display_scroll[0], self.y-display_scroll[1]))
         self.damage_frames = 16
 
 class Attack:
-    def __init__(self,x,y,mouse_x,mouse_y,width,height,speed,duration,player):
+    def __init__(self,mouse_x,mouse_y,range,duration,player):
         self.player = player
-        self.x = x-(width//2)
-        self.y = y-(height//2)
+        self.width = range
+        self.height = range
         self.mouse_x = mouse_x
         self.mouse_y = mouse_y
-        self.width = width
-        self.height = height
         self.duration = duration
-        self.speed = speed
-        self.angle = math.atan2(y-mouse_y,x-mouse_x)
-        self.x_vel = math.cos(self.angle) * self.speed
-        self.y_vel = math.sin(self.angle) * self.speed
-        self.x-=int(self.x_vel)
-        self.y-=int(self.y_vel)
+        self.angle = math.atan2(player.y+64-mouse_y,player.x+64-mouse_x)
+        self.exists = True
+        if (3*math.pi)/4 >= self.angle >= math.pi/4:
+            #top
+            self.x = player.x-(range//2)+64
+            self.y = player.y-range+64
+        elif math.pi/4 >= self.angle >= -math.pi/4:
+            #left
+            self.x = player.x-range+64
+            self.y = player.y-(range//2)+64
+        elif -math.pi/4 >= self.angle >= -(3*math.pi)/4:
+            #bottom
+            self.x = player.x-(range//2)+64
+            self.y = player.y+64
+        else:
+            #right
+            self.x = player.x+64
+            self.y = player.y-(range//2)+64
     
     def __del__(self):
         print("deleted bullet")
 
     def main(self, display, keys):
         if self.duration == 0:
+            self.exists = False
+            return
+        self.duration-=1
+        pg.draw.rect(display, (255,255,255), (self.x, self.y, self.width, self.height))
+        
+
+class Projectile(Attack):
+    def __init__(self,mouse_x,mouse_y,range,duration,speed,width,height,player):
+        Attack.__init__(self,mouse_x,mouse_y,range,duration,player)
+        self.x = player.x+64
+        self.y = player.y+64
+        self.width = width
+        self.height = height
+        self.speed = speed
+        self.x_vel = math.cos(self.angle) * speed
+        self.y_vel = math.sin(self.angle) * speed
+    
+    def setAngle(self, angle):
+        self.angle = angle
+        self.x_vel = math.cos(self.angle) * self.speed
+        self.y_vel = math.sin(self.angle) * self.speed
+    
+    def main(self, display, keys):
+        if self.duration == 0:
+            self.exists = False
             return
         self.duration-=1
         self.x -= int(self.x_vel)
@@ -123,6 +158,12 @@ class Attack:
             self.y -= player.speed
         pg.draw.rect(display, (255,255,255), (self.x, self.y, self.width, self.height))
 
+def Shotgun(mouse_x,mouse_y,duration,speed,ammos,player):
+    bullets = [Projectile(mouse_x,mouse_y,0,duration,speed,5,5,player) for _ in range(ammos)]
+    for x in range(len(bullets)):
+        bullets[x].setAngle(bullets[x].angle-(math.pi/8)+(math.pi/(4*ammos))*(x+1))
+    return bullets
+
 player = Player(624,344,32,32)
 
 display_scroll = [0,0]
@@ -132,8 +173,9 @@ player_attacks = []
 ennemies = [Ennemy(0,0,64,64,"slime",1)]
 
 items = {
-    "sword":lambda player,mouse_x,mouse_y:Attack(player.x+64,player.y+64,mouse_x,mouse_y,200,200,15,1,player),
-    "fire_small":lambda player,mouse_x,mouse_y:Attack(player.x+64,player.y+64,mouse_x,mouse_y,5,5,45,120,player)
+    "sword":lambda player,mouse_x,mouse_y:Attack(mouse_x,mouse_y,200,4,player),
+    "fire_small":lambda player,mouse_x,mouse_y:Projectile(mouse_x,mouse_y,0,120,45,5,5,player),
+    "shotgun":lambda player,mouse_x,mouse_y:Shotgun(mouse_x,mouse_y,120,45,5,player)
 }
 
 while True:
@@ -147,9 +189,17 @@ while True:
             sys.exit()
         
         if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-            player_attacks.append(items[player.right_equip](player,mouse_x,mouse_y))
+            attack = items[player.left_equip](player,mouse_x,mouse_y)
+            if not(isinstance(attack,list)):
+                player_attacks.append(attack)
+            else:
+                player_attacks += attack
         if event.type == pg.MOUSEBUTTONDOWN and event.button == 3:
-            player_attacks.append(items[player.left_equip](player,mouse_x,mouse_y))
+            attack = items[player.right_equip](player,mouse_x,mouse_y)
+            if not(isinstance(attack,list)):
+                player_attacks.append(attack)
+            else:
+                player_attacks += attack
     
     keys = pg.key.get_pressed()
 
@@ -174,16 +224,26 @@ while True:
 
     for ennemy in ennemies:
         ennemy.main(display)
-
-    for attack in player_attacks:
-        if attack.duration == 0:
-            del attack
+    
+    x=0
+    while x < len(player_attacks):
+        if not(player_attacks[x].exists):
+            del player_attacks[x]
             continue
-        attack.main(display,keys)
+        player_attacks[x].main(display,keys)
         for ennemy in ennemies:
-            #if ennemy.x-display_scroll[0] <= attack.x <= ennemy.x+ennemy.width-display_scroll[0] and ennemy.y-display_scroll[1] <= attack.y <= ennemy.y+ennemy.height-display_scroll[1]:
-            if checkAttack(ennemy,attack):
-                ennemy.damage(player)
+            if checkAttack(ennemy,player_attacks[x]):
+                ennemy.damage(player,player_attacks[x])
+        x+=1
+
+    """for x in range(len(player_attacks)):
+        if not(player_attacks[x].exists):
+            player_attacks[x] = None
+            continue
+        player_attacks[x].main(display,keys)
+        for ennemy in ennemies:
+            if checkAttack(ennemy,player_attacks[x]):
+                ennemy.damage(player,player_attacks[x])"""
 
     player.main(display)
 
