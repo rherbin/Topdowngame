@@ -13,6 +13,8 @@ player_walk = {"front":[pg.image.load("./ressources/images/player_front_"+str(x)
 slime_animation = [pg.image.load("./ressources/images/slime_"+str(x)+".png").convert() for x in range(1,5)]
 slime_damage = pg.image.load("./ressources/images/slime_damage.png").convert()
 
+display_scroll = [0,0]
+
 def checkAttack(ennemy,attack):
 
     l1=(ennemy.x-display_scroll[0],ennemy.y-display_scroll[1])
@@ -161,12 +163,10 @@ class Projectile(Attack):
 def Shotgun(mouse_x,mouse_y,duration,speed,ammos,player):
     bullets = [Projectile(mouse_x,mouse_y,0,duration,speed,5,5,player) for _ in range(ammos)]
     for x in range(len(bullets)):
-        bullets[x].setAngle(bullets[x].angle-(math.pi/8)+(math.pi/(4*ammos))*(x+1))
+        bullets[x].setAngle( bullets[x].angle - (math.pi/8 - math.pi/(8*ammos)) + ( math.pi/(4*ammos) * x ) )
     return bullets
 
 player = Player(624,344,32,32)
-
-display_scroll = [0,0]
 
 player_attacks = []
 
