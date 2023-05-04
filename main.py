@@ -80,8 +80,10 @@ class Player:
         self.animation_count += 1
         
         if self.isdashing:
+            self.speed = 30
             display.blit(pg.transform.scale(player_walk[self.orientation][4],(128,128)), (self.x, self.y))
             global dash_count
+            print(dash_count)
             dash_count -= 1
             if dash_count <= 0:
                 self.isdashing = False
@@ -240,11 +242,12 @@ items = {
     "sniper":lambda player,mouse_x,mouse_y:Projectile(mouse_x,mouse_y,{"range":0,"duration":60,"speed":180,"size":(3,3),"damage":60},player,lambda x,y:Particle(x,y,0,0,0),True,True)
 }
 
+dash_count = 0
+
 while True:
     display.fill((0,0,0))
 
     mouse_x, mouse_y = pg.mouse.get_pos()
-    dash_count = 0
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
@@ -265,10 +268,9 @@ while True:
                 player_attacks += attack
         if event.type == pg.KEYDOWN:
             if event.key == pg.K_SPACE and dash_count == 0:
-                dash_count = 120
+                dash_count = 10
                 player.isdashing = True
-            else:
-                pass
+
     
     keys = pg.key.get_pressed()
 
@@ -276,14 +278,6 @@ while True:
 
     player_move = [0,0]
 
-    """if dash_count>0:
-        player.speed = 20
-        player.isdashing = True
-        dash_count -= 1
-    elif keys[pg.K_SPACE]:
-        dash_count = 120
-        player.speed = 20
-        player.isdashing = True"""
     if keys[pg.K_q]:
         display_scroll[0] -= player.speed
         player_move[0] = player.speed
