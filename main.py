@@ -74,7 +74,6 @@ class Player:
         self.right_equip = "fire_small"
         self.left_equip = "shotgun"
 
-
     def main(self, display):
         if self.animation_count >= 31:
             self.animation_count = 0
@@ -82,7 +81,10 @@ class Player:
         
         if self.isdashing:
             display.blit(pg.transform.scale(player_walk[self.orientation][4],(128,128)), (self.x, self.y))
-            self.isdashing = False
+            global dash_count
+            dash_count -= 1
+            if dash_count <= 0:
+                self.isdashing = False
         elif self.moving:
             display.blit(pg.transform.scale(player_walk[self.orientation][self.animation_count//8],(128,128)), (self.x, self.y))
             self.moving = False
@@ -220,7 +222,7 @@ def Particle(x,y,x_vel,y_vel,duration):
 def Shotgun(mouse_x,mouse_y,duration,speed,ammos,player,particle):
     bullets = [Projectile(mouse_x,mouse_y,{"range":0,"duration":duration,"speed":speed,"size":(5,5),"damage":10},player,particle,True) for _ in range(ammos)]
     for x in range(len(bullets)):
-        bullets[x].setAngle( bullets[x].angle - (math.pi/8 - math.pi/(8*ammos)) + ( math.pi/(4*ammos) * x ) )
+        bullets[x].setAngle( bullets[x].angle - (math.pi/16 - math.pi/(16*ammos)) + ( math.pi/(8*ammos) * x ) )
     return bullets
 
 player = Player(display.get_size()[0]//2-64,display.get_size()[1]//2-64,32,32)
@@ -261,14 +263,12 @@ while True:
                 player_attacks.append(attack)
             else:
                 player_attacks += attack
-        """if event.type == pg.KEYDOWN:
+        if event.type == pg.KEYDOWN:
             if event.key == pg.K_SPACE and dash_count == 0:
-                #dash_count = 120
-                player.speed = 20
+                dash_count = 120
                 player.isdashing = True
             else:
-                player.speed = 10
-                player.isdashing = False"""
+                pass
     
     keys = pg.key.get_pressed()
 
@@ -334,12 +334,6 @@ while True:
                     ennemy.damage(player,player_attacks[x])
 
         x+=1
-    
-    """if dash_count <= 0:
-        player.speed = 10
-        player.isdashing = False
-    else:
-        dash_count -= 0"""
 
     player.main(display)
 
