@@ -83,7 +83,6 @@ class Player:
             self.speed = 30
             display.blit(pg.transform.scale(player_walk[self.orientation][4],(128,128)), (self.x, self.y))
             global dash_count
-            print(dash_count)
             dash_count -= 1
             if dash_count <= 0:
                 self.isdashing = False
